@@ -1,5 +1,7 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
+from payment_service import create_payment_link
+from membership_db import is_member
 
 # Menentukan state untuk percakapan
 EMAIL = 1  # State untuk meminta email
@@ -19,14 +21,19 @@ async def handle_email(update: Update, context: CallbackContext):
     email = update.message.text  # Ambil email yang diberikan oleh pengguna
     user_id = update.message.from_user.id
     
-    # Simpan email di penyimpanan sementara atau database
+    # Simpan email di penyimpanan sementara
     user_email[user_id] = email
     
+    # Cek apakah pengguna sudah terdaftar dan sudah membayar
+    if is_member(user_id):
+        await update.message.reply_text("You are already a member and your payment is confirmed!")
+        return ConversationHandler.END
+
     # Informasikan pengguna bahwa email sudah diterima
     await update.message.reply_text(f"Thank you! We have received your email: {email}. Now we will proceed with your payment.")
     
     # Lanjutkan ke proses pembayaran (atau lakukan hal lain yang diperlukan)
-    payment_link = create_payment_link(update.message.from_user, 1000)  # 1000 adalah jumlah dalam satuan terkecil (misalnya 1000 untuk 10.00 IDR)
+    payment_link = create_payment_link(update.message.from_user, 1000, email)  # 1000 adalah jumlah dalam satuan terkecil (misalnya 1000 untuk 10.00 IDR)
     
     if payment_link:
         await update.message.reply_text(f"Please complete your payment using this link: {payment_link}")
@@ -50,4 +57,6 @@ conversation_handler = ConversationHandler(
 )
 
 # Setup bot dengan handler percakapan
+application = Application.builder().token("YOUR_BOT_TOKEN").build()
 application.add_handler(conversation_handler)
+application.run_polling()
