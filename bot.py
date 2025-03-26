@@ -53,6 +53,7 @@ async def main():
 
     logger.info(f"🚀 Bot is running on port {PORT}")
 
+    # Jalankan webhook dengan benar
     await application.run_webhook(
         listen="0.0.0.0",
         port=PORT,
@@ -61,8 +62,8 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        loop = asyncio.new_event_loop()  # ✅ FIX: Gunakan new_event_loop untuk menghindari error
+        loop = asyncio.new_event_loop()  # ✅ Gunakan event loop baru
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(main())  # ✅ FIX: Gunakan run_until_complete agar event loop berjalan dengan benar
+        loop.run_until_complete(main())  # ✅ Pastikan dijalankan dengan benar
     except RuntimeError as e:
         logger.error(f"Runtime error: {e}")
