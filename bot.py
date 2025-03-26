@@ -39,10 +39,18 @@ async def start(update: Update, context: CallbackContext):
 
 async def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
     application.add_handler(CommandHandler("pay", start))
 
-    # Set webhook function
+    logger.info(f"🚀 Bot is running on port {PORT}")
+
+    await application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}",
+    )
+
+if __name__ == '__main__':
+    # Set webhook sebelum menjalankan bot
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
 
@@ -52,20 +60,5 @@ async def main():
     else:
         logger.error(f"❌ Webhook failed: {response.text}")
 
-    logger.info(f"🚀 Bot is running on port {PORT}")
-
-    await application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=webhook_url,
-    )
-
-if __name__ == '__main__':
-    try:
-        loop = asyncio.get_running_loop()  # Cek apakah event loop sudah ada
-    except RuntimeError:
-        loop = asyncio.new_event_loop()  # Buat event loop baru jika belum ada
-        asyncio.set_event_loop(loop)
-
-    loop.create_task(main())  # Jalankan `main()` sebagai task
-    loop.run_forever()  # Loop berjalan terus tanpa ditutup
+    # Jalankan bot
+    asyncio.run(main())  # Gunakan `asyncio.run()` dengan benar
