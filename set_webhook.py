@@ -1,12 +1,13 @@
 import requests
+import os
 
-# Ganti dengan URL webhook dari aplikasi Railway kamu
-WEBHOOK_URL = "https://tele-bot-production-8c1a.up.railway.app/7654581013:AAFcKVBMI5631hzxLdI8myDrw_1BISLISH0"
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+WEBHOOK_URL = "https://tele-bot-production-8c1a.up.railway.app/" + TELEGRAM_BOT_TOKEN
 
-# Ganti <your-telegram-bot-token> dengan token bot Telegram kamu
 response = requests.post(
-    f"https://api.telegram.org/bot<your-telegram-bot-token>/setWebhook",
+    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook",
     data={"url": WEBHOOK_URL}
 )
 
 print(response.text)
+
