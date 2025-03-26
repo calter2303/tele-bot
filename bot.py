@@ -2,7 +2,6 @@ import os
 import logging
 import asyncio
 import requests
-from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from dotenv import load_dotenv
@@ -22,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize bot application
 application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+application.initialize()  # Diperlukan agar process_update() berfungsi
 
 # Ensure database is created
 create_db()
@@ -42,27 +42,6 @@ async def start(update: Update, context: CallbackContext):
 
 application.add_handler(CommandHandler("pay", start))
 
-# Flask Webhook setup
-app = Flask(__name__)
-
-@app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
-def webhook():
-    try:
-        data = request.get_json()
-        if not data:
-            logger.warning("⚠️ Received empty request!")
-            return 'No data received', 400
-        
-        update = Update.de_json(data, application.bot)
-        logger.info(f"📩 Received update: {update}")
-        
-        asyncio.run(application.process_update(update))
-    except Exception as e:
-        logger.error(f"❌ Error processing update: {e}")
-        return 'Error', 500
-
-    return 'OK', 200
-
 # Set webhook function
 def set_webhook():
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
@@ -77,4 +56,9 @@ def set_webhook():
 if __name__ == '__main__':
     set_webhook()
     logger.info(f"🚀 Bot is running on port {PORT}")
-    app.run(host='0.0.0.0', port=PORT)
+
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}",
+    )
