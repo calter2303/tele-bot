@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
@@ -47,9 +48,13 @@ app = Flask(__name__)
 @app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
 def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
-    application.process_update(update)
+    
+    # Perbaiki dengan menjalankan secara async
+    asyncio.run(application.process_update(update))
+    
     return 'OK', 200
 
-# Menjalankan Flask
+# Menjalankan Flask dengan port dari Railway
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 80)))
+    port = int(os.getenv("PORT", 8080))  # Ambil PORT dari Railway
+    app.run(host='0.0.0.0', port=port)  # Pastikan bisa diakses dari luar
