@@ -22,6 +22,19 @@ app = Flask(__name__)
 # Setup Telegram bot
 application = Application.builder().token(TOKEN).build()
 
+# Fungsi untuk memberikan link kepada pengguna
+async def join(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username
+    
+    # Mengecek apakah pengguna sudah menjadi member atau belum
+    if is_member(user_id):
+        await update.message.reply_text(f"Hello {username}, you are already a member!")
+    else:
+        # Jika belum menjadi member, kirimkan link untuk bergabung
+        invite_link = "https://t.me/+u_XdTxJT_LgzYjE1"  # Gantilah dengan link undanganmu
+        await update.message.reply_text(f"Hello {username}, you can join the membership by using this link: {invite_link}")
+
 # Fungsi untuk menambahkan anggota
 async def add(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
@@ -54,10 +67,11 @@ async def echo(update: Update, context: CallbackContext):
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# Menambahkan handler baru untuk perintah add, check, remove
+# Menambahkan handler baru untuk perintah add, check, remove, dan join
 application.add_handler(CommandHandler("add", add))
 application.add_handler(CommandHandler("check", check_member))
 application.add_handler(CommandHandler("remove", remove))
+application.add_handler(CommandHandler("join", join))  # Handler untuk /join
 
 @app.route("/")
 def index():
