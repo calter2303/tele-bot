@@ -41,12 +41,13 @@ async def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("pay", start))
 
+    webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
     logger.info(f"🚀 Bot is running on port {PORT}")
 
     await application.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url=f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}",
+        webhook_url=webhook_url,
     )
 
 if __name__ == '__main__':
@@ -60,5 +61,10 @@ if __name__ == '__main__':
     else:
         logger.error(f"❌ Webhook failed: {response.text}")
 
-    # Jalankan bot
-    asyncio.run(main())  # Gunakan `asyncio.run()` dengan benar
+    # Gunakan asyncio.run() hanya jika belum ada event loop
+    try:
+        asyncio.run(main())
+    except RuntimeError:
+        loop = asyncio.get_event_loop()
+        loop.create_task(main())
+        loop.run_forever()
