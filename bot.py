@@ -1,7 +1,15 @@
+import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
+from dotenv import load_dotenv
 from payment_service import create_payment_link  # Pastikan modul ini ada dan fungsinya benar
 from membership_db import is_member  # Pastikan modul ini ada dan fungsinya benar
+
+# Memuat variabel dari file .env
+load_dotenv()
+
+# Mendapatkan token bot dari file .env
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Menentukan state untuk percakapan
 EMAIL = 1  # State untuk meminta email
@@ -12,8 +20,6 @@ user_email = {}
 # Fungsi untuk memulai percakapan
 async def start(update: Update, context: CallbackContext):
     await update.message.reply_text("Hello! To proceed with the payment, I need your email address. Please provide it.")
-
-    # Mengubah state ke EMAIL
     return EMAIL
 
 # Fungsi untuk menangani email
@@ -32,7 +38,7 @@ async def handle_email(update: Update, context: CallbackContext):
     # Informasikan pengguna bahwa email sudah diterima
     await update.message.reply_text(f"Thank you! We have received your email: {email}. Now we will proceed with your payment.")
     
-    # Lanjutkan ke proses pembayaran (atau lakukan hal lain yang diperlukan)
+    # Lanjutkan ke proses pembayaran
     payment_link = create_payment_link(update.message.from_user, 1000, email)  # 1000 adalah jumlah dalam satuan terkecil (misalnya 1000 untuk 10.00 IDR)
     
     if payment_link:
@@ -50,13 +56,13 @@ async def cancel(update: Update, context: CallbackContext):
 # Menambahkan handler percakapan untuk meminta email
 conversation_handler = ConversationHandler(
     entry_points=[CommandHandler("pay", start)],  # Menggunakan perintah /pay untuk memulai percakapan
-    states={
-        EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_email)]  # Mendengarkan input email pengguna
-    },
+    states={EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_email)]},  # Mendengarkan input email pengguna
     fallbacks=[CommandHandler("cancel", cancel)]  # Menyediakan opsi untuk membatalkan percakapan
 )
 
 # Setup bot dengan handler percakapan
 application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()  # Menggunakan variabel TELEGRAM_BOT_TOKEN
 application.add_handler(conversation_handler)
+
+# Menjalankan bot
 application.run_polling()
