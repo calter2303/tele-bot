@@ -6,15 +6,15 @@ import base64
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
-from dotenv import load_dotenv
 
-# Memuat variabel dari file .env
-load_dotenv()
+# Ambil variabel dari environment (tanpa .env)
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+MIDTRANS_SERVER_KEY = os.environ.get('MIDTRANS_SERVER_KEY')
+CHANNEL_ID = os.environ.get('CHANNEL_ID')
 
-# Ambil variabel dari .env
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-MIDTRANS_SERVER_KEY = os.getenv('MIDTRANS_SERVER_KEY')
-CHANNEL_ID = os.getenv('CHANNEL_ID')
+# Cek apakah variabel ada, kalau gak ada exit program
+if not all([TELEGRAM_BOT_TOKEN, MIDTRANS_SERVER_KEY, CHANNEL_ID]):
+    raise ValueError("❌ ERROR: Pastikan TELEGRAM_BOT_TOKEN, MIDTRANS_SERVER_KEY, dan CHANNEL_ID ada di environment!")
 
 # URL Midtrans untuk pembayaran
 MIDTRANS_URL = "https://api.sandbox.midtrans.com/v2/charge"
@@ -97,5 +97,10 @@ async def main():
     await app.run_polling()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     loop.run_until_complete(main())
