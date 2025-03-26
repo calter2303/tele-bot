@@ -18,7 +18,7 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.getenv("PORT", 8080))
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Inisialisasi aplikasi bot
@@ -58,7 +58,7 @@ async def webhook():
         logging.info(f"📩 Received update: {update}")
         
         # Proses update secara async
-        asyncio.create_task(application.process_update(update))
+        await application.process_update(update)
     except Exception as e:
         logging.error(f"❌ Error processing update: {e}")
         return 'Error', 500
