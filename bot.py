@@ -55,4 +55,6 @@ async def main():
     await asyncio.gather(telegram_task, flask_task)
 
 if __name__ == "__main__":
-    asyncio.run(main())  # Railway butuh ini buat event loop
+    loop = asyncio.get_event_loop()
+    loop.create_task(main())  # ✅ Jalankan main() tanpa restart event loop
+    loop.run_forever()  # ✅ Pastikan loop tetap berjalan
