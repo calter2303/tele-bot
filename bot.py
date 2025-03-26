@@ -50,11 +50,14 @@ async def run_flask():
 
 async def main():
     """Jalankan Telegram bot & Flask secara bersamaan."""
-    telegram_task = asyncio.create_task(run_telegram())  
-    flask_task = asyncio.create_task(run_flask())  
-    await asyncio.gather(telegram_task, flask_task)
+    await asyncio.gather(run_telegram(), run_flask())
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(main())  # ✅ Jalankan main() tanpa restart event loop
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    loop.create_task(main())  # ✅ Jalankan tanpa menghentikan event loop
     loop.run_forever()  # ✅ Pastikan loop tetap berjalan
