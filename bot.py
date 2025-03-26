@@ -54,21 +54,18 @@ async def main():
 
     logger.info(f"🚀 Bot is running on port {PORT}")
 
-    # Perbaikan event loop
-    try:
-        await application.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            webhook_url=webhook_url,
-        )
-    except RuntimeError:
-        logger.warning("Event loop sudah berjalan, menjalankan secara manual.")
-        loop = asyncio.get_running_loop()
-        loop.create_task(application.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            webhook_url=webhook_url,
-        ))
+    await application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=webhook_url,
+    )
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        loop = asyncio.get_running_loop()  # Cek apakah event loop sudah ada
+    except RuntimeError:
+        loop = asyncio.new_event_loop()  # Buat event loop baru jika belum ada
+        asyncio.set_event_loop(loop)
+
+    loop.create_task(main())  # Jalankan `main()` sebagai task
+    loop.run_forever()  # Loop berjalan terus tanpa ditutup
