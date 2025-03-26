@@ -1,5 +1,5 @@
-midtrans-python
+python-telegram-bot
 flask
+requests
 python-dotenv
-uvicorn
-telegram
+midtrans-python
