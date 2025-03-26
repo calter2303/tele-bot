@@ -51,7 +51,7 @@ async def main():
         webhook_url=webhook_url,
     )
 
-def set_webhook():
+async def set_webhook():
     """Set Telegram webhook with retry mechanism to handle rate limits (429)"""
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
@@ -64,18 +64,14 @@ def set_webhook():
         elif response.status_code == 429:  # Telegram rate limit
             retry_after = response.json().get("parameters", {}).get("retry_after", 1)
             logger.warning(f"⚠️ Too many requests. Retrying in {retry_after} seconds...")
-            asyncio.sleep(retry_after)  # Tunggu sebelum mencoba lagi
+            await asyncio.sleep(retry_after)  # Perbaiki dengan `await`
         else:
             logger.error(f"❌ Webhook failed: {response.text}")
             break
 
 if __name__ == '__main__':
-    set_webhook()  # Pastikan webhook di-set sebelum bot berjalan
+    asyncio.run(set_webhook())  # Pastikan webhook di-set sebelum bot berjalan
 
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(main())  # Jalankan bot tanpa konflik event loop
+    loop = asyncio.get_event_loop()
+    asyncio.create_task(main())  # Jalankan bot sebagai task tanpa konflik loop
+    loop.run_forever()  # Pastikan event loop berjalan terus tanpa ditutup
