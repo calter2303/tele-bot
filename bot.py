@@ -76,9 +76,3 @@ async def main():
 
     # Run membership checker in background
     asyncio.create_task(check_membership())
-
-    print("🤖 Bot is running...")
-    await app.run_polling()
-
-if __name__ == "__main__":
-    asyncio.run(main())
