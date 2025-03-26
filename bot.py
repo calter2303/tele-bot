@@ -38,6 +38,7 @@ async def start(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ There was an error creating the payment link. Please try again later.")
 
 async def main():
+    """Main function to run the bot with webhook"""
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("pay", start))
 
@@ -50,21 +51,31 @@ async def main():
         webhook_url=webhook_url,
     )
 
-if __name__ == '__main__':
-    # Set webhook sebelum menjalankan bot
+def set_webhook():
+    """Set Telegram webhook with retry mechanism to handle rate limits (429)"""
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
 
-    response = requests.post(url, json={"url": webhook_url})
-    if response.status_code == 200:
-        logger.info(f"✅ Webhook set: {webhook_url}")
-    else:
-        logger.error(f"❌ Webhook failed: {response.text}")
+    for attempt in range(5):  # Coba maksimal 5 kali
+        response = requests.post(url, json={"url": webhook_url})
+        if response.status_code == 200:
+            logger.info(f"✅ Webhook set successfully: {webhook_url}")
+            return
+        elif response.status_code == 429:  # Telegram rate limit
+            retry_after = response.json().get("parameters", {}).get("retry_after", 1)
+            logger.warning(f"⚠️ Too many requests. Retrying in {retry_after} seconds...")
+            asyncio.sleep(retry_after)  # Tunggu sebelum mencoba lagi
+        else:
+            logger.error(f"❌ Webhook failed: {response.text}")
+            break
 
-    # Gunakan asyncio.run() hanya jika belum ada event loop
+if __name__ == '__main__':
+    set_webhook()  # Pastikan webhook di-set sebelum bot berjalan
+
     try:
-        asyncio.run(main())
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        loop = asyncio.get_event_loop()
-        loop.create_task(main())
-        loop.run_forever()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(main())  # Jalankan bot tanpa konflik event loop
