@@ -10,7 +10,6 @@ import uvicorn
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Masukkan URL webhook (misal: https://yourdomain.com/webhook)
 
 # Setup logging
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -27,6 +26,7 @@ async def start(update: Update, context: CallbackContext):
 async def echo(update: Update, context: CallbackContext):
     await update.message.reply_text(update.message.text)
 
+# Tambahkan handler
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
@@ -35,10 +35,9 @@ def index():
     return "Bot is alive!"
 
 async def run_telegram():
-    """Menjalankan bot Telegram dengan Webhook."""
-    await application.bot.set_webhook(url=WEBHOOK_URL)
+    """Menjalankan bot Telegram dengan polling."""
+    await application.initialize()  # ✅ FIX: Pastikan aplikasi diinisialisasi dulu
     await application.start()
-    await application.updater.start_polling()  # Alternatif jika tidak pakai webhook
     await application.run_polling()
 
 def run_flask():
@@ -46,6 +45,5 @@ def run_flask():
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run_telegram())  # Jalankan bot di main thread
+    asyncio.run(run_telegram())  # ✅ FIX: Gunakan `asyncio.run()` langsung
     run_flask()  # Jalankan Flask setelah bot siap
