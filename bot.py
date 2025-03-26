@@ -1,7 +1,7 @@
 import os
 import logging
-import asyncio
 import requests
+import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from dotenv import load_dotenv
@@ -18,10 +18,6 @@ PORT = int(os.getenv("PORT", 8080))
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-# Initialize bot application
-application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-application.initialize()  # Diperlukan agar process_update() berfungsi
 
 # Ensure database is created
 create_db()
@@ -40,10 +36,14 @@ async def start(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("❌ There was an error creating the payment link. Please try again later.")
 
-application.add_handler(CommandHandler("pay", start))
+async def main():
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    await application.initialize()  # Perbaikan utama
 
-# Set webhook function
-def set_webhook():
+    application.add_handler(CommandHandler("pay", start))
+
+    # Set webhook function
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
 
@@ -53,12 +53,12 @@ def set_webhook():
     else:
         logger.error(f"❌ Webhook failed: {response.text}")
 
-if __name__ == '__main__':
-    set_webhook()
     logger.info(f"🚀 Bot is running on port {PORT}")
-
-    application.run_webhook(
+    await application.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url=f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}",
+        webhook_url=webhook_url,
     )
+
+if __name__ == '__main__':
+    asyncio.run(main())
