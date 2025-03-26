@@ -54,11 +54,14 @@ async def main():
         logger.error(f"❌ Webhook failed: {response.text}")
 
     logger.info(f"🚀 Bot is running on port {PORT}")
+    
     await application.run_webhook(
         listen="0.0.0.0",
         port=PORT,
         webhook_url=webhook_url,
     )
 
+# Perbaikan utama agar cocok dengan Railway
 if __name__ == '__main__':
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
