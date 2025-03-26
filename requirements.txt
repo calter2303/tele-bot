@@ -1,4 +1,4 @@
-midtrans
+git+https://github.com/Midtrans/midtrans-python.git
 flask
 python-dotenv
 uvicorn
