@@ -1,7 +1,7 @@
 import os
 import logging
 import asyncio
-from flask import Flask, request
+from flask import Flask
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
@@ -33,11 +33,19 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 def index():
     return "Bot is alive!"
 
-async def main():
-    """Jalankan Flask dan bot secara bersamaan dalam event loop yang sama."""
-    bot_task = asyncio.create_task(application.run_polling())
-    server_task = asyncio.to_thread(uvicorn.run, app, host="0.0.0.0", port=8000)
-    await asyncio.gather(bot_task, server_task)
+async def run_telegram():
+    """Jalankan polling bot Telegram tanpa menutup event loop."""
+    await application.run_polling()
+
+def main():
+    """Menjalankan Flask dan Telegram dalam satu event loop tanpa asyncio.run()."""
+    loop = asyncio.get_event_loop()
+
+    # Jalankan bot Telegram dalam event loop
+    loop.create_task(run_telegram())
+
+    # Jalankan Flask menggunakan Uvicorn dalam event loop yang sama
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
