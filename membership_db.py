@@ -1,9 +1,8 @@
 import sqlite3
 
-# Nama database
 DB_NAME = "members.db"
 
-# Fungsi untuk membuat database dan tabel
+# Membuat database dan tabel jika belum ada
 def create_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -18,20 +17,18 @@ def create_db():
     conn.commit()
     conn.close()
 
-    print("Database and table members are ready.")  # Log tambahan
-
-# Fungsi untuk menambahkan anggota
+# Fungsi untuk menambahkan anggota baru
 def add_member(user_id, username, payment_id=None):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute('''
         INSERT OR REPLACE INTO members (user_id, username, payment_id, is_paid) 
         VALUES (?, ?, ?, ?)
-    ''', (user_id, username, payment_id, 0))  # Status pembayaran awal adalah 0 (belum membayar)
+    ''', (user_id, username, payment_id, 0))  
     conn.commit()
     conn.close()
 
-# Fungsi untuk memeriksa apakah pengguna sudah terdaftar
+# Fungsi untuk memeriksa apakah pengguna sudah membayar
 def is_member(user_id):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -39,14 +36,6 @@ def is_member(user_id):
     member = c.fetchone()
     conn.close()
     return member is not None
-
-# Fungsi untuk menghapus anggota
-def remove_member(user_id):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('DELETE FROM members WHERE user_id = ?', (user_id,))
-    conn.commit()
-    conn.close()
 
 # Fungsi untuk memperbarui status pembayaran
 def update_payment_status(user_id, payment_id):
