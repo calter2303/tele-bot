@@ -41,18 +41,15 @@ async def run_telegram():
     print("Telegram bot started!")
     await application.run_polling()
 
-def run_flask():
-    """Menjalankan Flask dengan Uvicorn."""
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+async def run_flask():
+    """Menjalankan Flask dengan Uvicorn di thread terpisah."""
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
 
 async def main():
-    """Menjalankan Telegram bot dan Flask secara bersamaan."""
-    telegram_task = asyncio.create_task(run_telegram())
-
-    # Jalankan Flask secara async juga biar gak nge-block
-    flask_task = asyncio.to_thread(run_flask)
-
-    await asyncio.gather(telegram_task, flask_task)
+    """Jalankan Telegram bot & Flask secara bersamaan tanpa saling blokir."""
+    await asyncio.gather(run_telegram(), run_flask())
 
 if __name__ == "__main__":
-    asyncio.run(main())  # ✅ FIX: Gunakan asyncio.run() untuk menjalankan kedua task bareng
+    asyncio.run(main())  # ✅ Menjalankan Telegram bot & Flask secara async bareng
