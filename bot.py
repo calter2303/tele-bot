@@ -5,6 +5,7 @@ from flask import Flask
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+import threading
 import uvicorn
 
 # Load environment variables
@@ -33,19 +34,20 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 def index():
     return "Bot is alive!"
 
-async def run_telegram():
-    """Jalankan polling bot Telegram tanpa menutup event loop."""
-    await application.run_polling()
-
-def main():
-    """Menjalankan Flask dan Telegram dalam satu event loop tanpa asyncio.run()."""
+def run_telegram():
+    """Menjalankan polling bot Telegram di thread terpisah."""
+    asyncio.set_event_loop(asyncio.new_event_loop())  # Membuat event loop baru
     loop = asyncio.get_event_loop()
+    loop.run_until_complete(application.run_polling())
 
-    # Jalankan bot Telegram dalam event loop
-    loop.create_task(run_telegram())
-
-    # Jalankan Flask menggunakan Uvicorn dalam event loop yang sama
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+def run_flask():
+    """Menjalankan server Flask."""
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
 
 if __name__ == "__main__":
-    main()
+    # Menjalankan Telegram bot di thread terpisah
+    telegram_thread = threading.Thread(target=run_telegram, daemon=True)
+    telegram_thread.start()
+
+    # Menjalankan Flask di thread utama
+    run_flask()
