@@ -37,39 +37,53 @@ async def start(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("❌ There was an error creating the payment link. Please try again later.")
 
+async def set_webhook(application: Application):
+    """Cek apakah webhook sudah ada sebelum mengaturnya ulang."""
+    webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
+    
+    # Cek webhook yang sudah terdaftar
+    check_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getWebhookInfo"
+    response = requests.get(check_url).json()
+
+    if response.get("result") and response["result"].get("url") == webhook_url:
+        logger.info(f"✅ Webhook sudah diset ke: {webhook_url}")
+    else:
+        logger.info("🔄 Mengatur webhook baru...")
+        set_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
+        res = requests.post(set_url, json={"url": webhook_url})
+        if res.status_code == 200:
+            logger.info(f"✅ Webhook berhasil diatur: {webhook_url}")
+        else:
+            logger.error(f"❌ Gagal mengatur webhook: {res.text}")
+
 async def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    await application.initialize()  # Perbaikan utama
+    await application.initialize()
 
     application.add_handler(CommandHandler("pay", start))
 
-    # Set webhook function
-    webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
-
-    response = requests.post(url, json={"url": webhook_url})
-    if response.status_code == 200:
-        logger.info(f"✅ Webhook set: {webhook_url}")
-    else:
-        logger.error(f"❌ Webhook failed: {response.text}")
+    # Set webhook hanya jika belum ada
+    await set_webhook(application)
 
     logger.info(f"🚀 Bot is running on port {PORT}")
     
     await application.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url=webhook_url,
+        webhook_url=f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}",
     )
 
 # Perbaikan utama agar kompatibel dengan Railway
 if __name__ == '__main__':
-    nest_asyncio.apply()  # Tambahan untuk menghindari error "This event loop is already running"
+    nest_asyncio.apply()  # Hindari error event loop
     
     try:
         loop = asyncio.get_running_loop()
+        if loop.is_running():
+            logger.warning("⚠️ Event loop sudah berjalan, menjalankan task secara manual.")
+            task = loop.create_task(main())
+            loop.run_until_complete(task)
+        else:
+            loop.run_until_complete(main())
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(main())
+        asyncio.run(main())  # Jalankan bot secara aman jika belum ada event loop
