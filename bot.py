@@ -30,15 +30,15 @@ async def start(update: Update, context: CallbackContext):
 
     # Cek apakah pengguna sudah menjadi member
     if is_member(user_id):
-        await update.message.reply_text("You are already a member and your payment is confirmed!")
+        await update.message.reply_text("✅ You are already a member and your payment is confirmed!")
         return
 
     # Buat link pembayaran
     payment_link = create_payment_link(update.message.from_user, 1000)
     if payment_link:
-        await update.message.reply_text(f"Please complete your payment using this link: {payment_link}")
+        await update.message.reply_text(f"💳 Please complete your payment using this link: {payment_link}")
     else:
-        await update.message.reply_text("There was an error creating the payment link. Please try again later.")
+        await update.message.reply_text("❌ There was an error creating the payment link. Please try again later.")
 
 # Tambahkan handler untuk perintah /pay
 application.add_handler(CommandHandler("pay", start))
@@ -47,26 +47,37 @@ application.add_handler(CommandHandler("pay", start))
 app = Flask(__name__)
 
 @app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
-def webhook():
+async def webhook():
     try:
-        update = Update.de_json(request.get_json(force=True), application.bot)
-        logging.info(f"Received update: {update}")
+        data = request.get_json()
+        if not data:
+            logging.warning("⚠️ Received empty request!")
+            return 'No data received', 400
+        
+        update = Update.de_json(data, application.bot)
+        logging.info(f"📩 Received update: {update}")
+        
+        # Proses update secara async
         asyncio.create_task(application.process_update(update))
     except Exception as e:
-        logging.error(f"Error processing update: {e}")
+        logging.error(f"❌ Error processing update: {e}")
+        return 'Error', 500
+
     return 'OK', 200
 
 # Set webhook otomatis saat startup
 def set_webhook():
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
-    response = requests.post(url, data={"url": webhook_url})
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
+
+    response = requests.post(url, json={"url": webhook_url})
 
     if response.status_code == 200:
-        logging.info("✅ Webhook berhasil diatur!")
+        logging.info(f"✅ Webhook berhasil diatur: {webhook_url}")
     else:
         logging.error(f"❌ Gagal mengatur webhook: {response.text}")
 
 if __name__ == '__main__':
     set_webhook()  # Pasang webhook otomatis saat bot start
+    logging.info(f"🚀 Bot is running on port {PORT}")
     app.run(host='0.0.0.0', port=PORT)
