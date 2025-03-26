@@ -5,3 +5,5 @@ python-telegram-bot[webhooks]
 requests
 midtransclient
 gunicorn
+nest_asyncio
+
