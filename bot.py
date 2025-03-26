@@ -35,11 +35,11 @@ def index():
     return "Bot is alive!"
 
 async def run_telegram():
-    """Menjalankan bot Telegram dengan polling."""
+    """Menjalankan bot Telegram dengan polling sebagai task terpisah."""
     await application.initialize()
     await application.start()
-    print("Telegram bot started!")
-    await application.run_polling()
+    logging.info("Telegram bot started!")
+    await application.run_polling(stop_signals=None)  # ⬅️ Hindari penutupan event loop
 
 async def run_flask():
     """Menjalankan Flask dengan Uvicorn di thread terpisah."""
@@ -48,14 +48,10 @@ async def run_flask():
     await server.serve()
 
 async def main():
-    """Jalankan Telegram bot & Flask secara bersamaan tanpa saling blokir."""
-    await asyncio.gather(run_telegram(), run_flask())
+    """Jalankan Telegram bot & Flask secara bersamaan."""
+    telegram_task = asyncio.create_task(run_telegram())  # ⬅️ Jalan sebagai task terpisah
+    flask_task = asyncio.create_task(run_flask())  
+    await asyncio.gather(telegram_task, flask_task)
 
 if __name__ == "__main__":
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(main())  # ✅ Menghindari error loop ganda
+    asyncio.run(main())  # ✅ Sekarang event loop tidak ditutup secara paksa
