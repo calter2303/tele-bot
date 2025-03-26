@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
-from payment_service import create_payment_link
-from membership_db import is_member
+from payment_service import create_payment_link  # Pastikan modul ini ada dan fungsinya benar
+from membership_db import is_member  # Pastikan modul ini ada dan fungsinya benar
 
 # Menentukan state untuk percakapan
 EMAIL = 1  # State untuk meminta email
@@ -57,6 +57,6 @@ conversation_handler = ConversationHandler(
 )
 
 # Setup bot dengan handler percakapan
-application = Application.builder().token("YOUR_BOT_TOKEN").build()
+application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()  # Menggunakan variabel TELEGRAM_BOT_TOKEN
 application.add_handler(conversation_handler)
 application.run_polling()
