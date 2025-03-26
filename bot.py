@@ -70,5 +70,12 @@ async def set_webhook():
             break
 
 if __name__ == '__main__':
-    asyncio.run(set_webhook())  # Gunakan `asyncio.run()` untuk webhook
-    asyncio.run(main())  # Gunakan `asyncio.run()` untuk menjalankan bot
+    loop = asyncio.get_event_loop()
+    
+    try:
+        loop.run_until_complete(set_webhook())  # Set webhook dulu
+        loop.run_until_complete(main())  # Jalankan bot
+    except RuntimeError:
+        logger.warning("⚠️ Event loop sudah berjalan, menjalankan tugas di loop yang ada.")
+        asyncio.ensure_future(set_webhook())  # Pastikan webhook diatur
+        asyncio.ensure_future(main())  # Pastikan bot berjalan
