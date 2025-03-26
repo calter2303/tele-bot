@@ -56,6 +56,10 @@ async def cancel(update: Update, context: CallbackContext):
     await update.message.reply_text("Payment process has been canceled.")
     return ConversationHandler.END  # Mengakhiri percakapan jika dibatalkan
 
+# Fungsi untuk menangani perintah /check
+async def check(update: Update, context: CallbackContext):
+    await update.message.reply_text("Bot is working! Your /check command was received.")
+
 # Menambahkan handler percakapan untuk meminta email
 conversation_handler = ConversationHandler(
     entry_points=[CommandHandler("pay", start)],  # Menggunakan perintah /pay untuk memulai percakapan
@@ -66,6 +70,10 @@ conversation_handler = ConversationHandler(
 # Setup bot dengan handler percakapan
 application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 application.add_handler(conversation_handler)
+
+# Tambahkan handler untuk /check
+check_handler = CommandHandler('check', check)
+application.add_handler(check_handler)
 
 # Setup Flask untuk menerima webhook
 app = Flask(__name__)
