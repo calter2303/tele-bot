@@ -1,23 +1,30 @@
-# Misalnya, menggunakan Stripe sebagai contoh layanan pembayaran
+import midtransclient
 
-import stripe
+# Inisialisasi Midtrans
+midtrans = midtransclient.CoreApi(
+    is_production=False,  # Set ke True jika di lingkungan produksi
+    server_key="YOUR_SERVER_KEY",  # Gantilah dengan server key dari Midtrans
+    client_key="YOUR_CLIENT_KEY"   # Gantilah dengan client key dari Midtrans
+)
 
-# Inisialisasi Stripe
-stripe.api_key = "YOUR_STRIPE_SECRET_KEY"  # Gantilah dengan Secret Key dari Stripe
+def create_payment_link(user, amount):
+    # Data transaksi yang diperlukan oleh Midtrans
+    transaction_details = {
+        'order_id': f"order-{user['id']}",  # Gantilah dengan ID pesanan unik
+        'gross_amount': amount  # Jumlah yang harus dibayar
+    }
 
-def create_payment_link(user_id, amount):
-    # Membuat Payment Intent di Stripe
-    intent = stripe.PaymentIntent.create(
-        amount=amount,
-        currency="usd",  # Gantilah dengan mata uang yang sesuai
-        metadata={'user_id': user_id}
-    )
-    # Kembalikan client secret atau link pembayaran untuk frontend
-    return intent.client_secret
+    # Metadata pengguna dari Telegram
+    customer_details = {
+        'first_name': user['first_name'],  # Nama depan pengguna
+        'email': user_email.get(user['id'], 'user@example.com'),  # Email yang sudah dimasukkan oleh pengguna
+    }
 
-def verify_payment_status(payment_id):
-    # Memverifikasi status pembayaran
-    payment = stripe.PaymentIntent.retrieve(payment_id)
-    if payment.status == "succeeded":
-        return True
-    return False
+    # Membuat transaksi menggunakan Midtrans
+    try:
+        transaction = midtrans.transaction.create(transaction_details, customer_details)
+        # Kembalikan URL pembayaran untuk frontend (biasanya digunakan untuk pengalihan ke halaman pembayaran)
+        return transaction['redirect_url']
+    except Exception as e:
+        print(f"Error creating payment link: {e}")
+        return None
