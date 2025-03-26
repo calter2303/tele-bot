@@ -18,6 +18,8 @@ def create_db():
     conn.commit()
     conn.close()
 
+    print("Database and table members are ready.")  # Log tambahan
+
 # Fungsi untuk menambahkan anggota
 def add_member(user_id, username, payment_id=None):
     conn = sqlite3.connect(DB_NAME)
