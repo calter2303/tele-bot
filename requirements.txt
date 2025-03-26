@@ -1,4 +1,4 @@
-midtrans-python
+midtrans
 flask
 python-dotenv
 uvicorn
