@@ -75,9 +75,7 @@ if __name__ == '__main__':
         await main()
 
     try:
-        asyncio.run(run())  # **INI FIX UTAMA BUAT EVENT LOOP**
+        asyncio.get_running_loop().run_until_complete(run())
     except RuntimeError:
         logger.warning("⚠️ Event loop sudah berjalan, menjalankan tugas di loop yang ada.")
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(run())  # **Jalanin task di event loop baru**
+        asyncio.run(run())  # Jalankan tanpa konflik event loop
