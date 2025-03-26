@@ -7,7 +7,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from dotenv import load_dotenv
 from payment_service import create_payment_link
-from membership_db import is_member
+from membership_db import is_member, create_db
 
 # Memuat variabel dari file .env
 load_dotenv()
@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 # Inisialisasi aplikasi bot
 application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+# Pastikan database dibuat saat startup
+create_db()
 
 # Fungsi untuk memulai proses pembayaran
 async def start(update: Update, context: CallbackContext):
@@ -47,7 +50,7 @@ application.add_handler(CommandHandler("pay", start))
 app = Flask(__name__)
 
 @app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
-async def webhook():
+def webhook():
     try:
         data = request.get_json()
         if not data:
@@ -58,7 +61,7 @@ async def webhook():
         logging.info(f"📩 Received update: {update}")
         
         # Proses update secara async
-        await application.process_update(update)
+        asyncio.run(application.process_update(update))
     except Exception as e:
         logging.error(f"❌ Error processing update: {e}")
         return 'Error', 500
@@ -80,4 +83,10 @@ def set_webhook():
 if __name__ == '__main__':
     set_webhook()  # Pasang webhook otomatis saat bot start
     logging.info(f"🚀 Bot is running on port {PORT}")
-    app.run(host='0.0.0.0', port=PORT)
+
+    try:
+        app.run(host='0.0.0.0', port=PORT)
+    except Exception as e:
+        logging.error(f"❌ Flask failed to start: {e}")
+        logging.info("🛠 Switching to polling mode as a backup...")
+        application.run_polling()
