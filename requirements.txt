@@ -1,8 +1,7 @@
-flask[async]
+flask
 python-dotenv
 uvicorn
 python-telegram-bot
 requests
 midtransclient
 gunicorn
-
