@@ -96,4 +96,6 @@ async def main():
     # Jalankan bot
     await app.run_polling()
 
-if __
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
