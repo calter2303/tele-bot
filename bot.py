@@ -1,78 +1,65 @@
 import os
-import time
-import json
+import logging
 import asyncio
-import requests
-from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify
+from telegram import Bot, Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-# Load environment variables
-load_dotenv()
+# 🔹 Load Environment Variables
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHANNEL_ID = os.getenv("CHANNEL_ID")
+MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
 
-# Get variables from .env or Railway environment
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-MIDTRANS_SERVER_KEY = os.getenv('MIDTRANS_SERVER_KEY')
-CHANNEL_ID = os.getenv('CHANNEL_ID')
+# 🔹 Setup Logging
+logging.basicConfig(level=logging.INFO)
 
-# Midtrans API URL
-MIDTRANS_URL = "https://api.sandbox.midtrans.com/v2/charge"
+# 🔹 Flask App
+app = Flask(__name__)
 
-# Membership database (temporary dict)
-memberships = {}
+# 🔹 Telegram Bot Setup
+bot = Bot(token=TOKEN)
 
 async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text("Halo! Selamat datang di Membership Bot 🚀\nGunakan /buy untuk membeli akses.")
+    """Handler untuk command /start"""
+    await update.message.reply_text("Halo! Selamat datang di bot kami.")
 
-async def buy(update: Update, context: CallbackContext):
-    user_id = update.message.chat_id
-    amount = 15000  # Price: 15,000 IDR
+async def handle_message(update: Update, context: CallbackContext):
+    """Handler untuk pesan teks biasa"""
+    text = update.message.text
+    await update.message.reply_text(f"Kamu mengirim: {text}")
+
+# 🔹 Setup Telegram Bot dengan Async Application
+application = Application.builder().token(TOKEN).build()
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+@app.route("/", methods=["GET"])
+def home():
+    return "Bot Telegram dengan Midtrans 🚀"
+
+@app.route("/midtrans-webhook", methods=["POST"])
+def midtrans_webhook():
+    """Handle webhook dari Midtrans"""
+    data = request.json
+    logging.info(f"Webhook Midtrans: {data}")
+
+    # Kirim notifikasi ke Telegram
+    status = data.get("transaction_status", "UNKNOWN")
+    order_id = data.get("order_id", "No Order ID")
+    payment_type = data.get("payment_type", "No Payment Type")
+
+    message = f"🔔 Pembayaran Masuk!\n📌 Order ID: {order_id}\n💳 Status: {status}\n🛠 Metode: {payment_type}"
     
-    headers = {
-        "Authorization": "Basic " + MIDTRANS_SERVER_KEY,
-        "Content-Type": "application/json",
-    }
+    # Kirim ke Telegram Channel
+    asyncio.run(bot.send_message(chat_id=CHANNEL_ID, text=message))
     
-    data = {
-        "payment_type": "gopay",
-        "transaction_details": {
-            "order_id": f"ORDER-{user_id}-{int(time.time())}",
-            "gross_amount": amount
-        },
-        "gopay": {
-            "enable_callback": True,
-            "callback_url": "https://example.com/callback"
-        }
-    }
+    return jsonify({"status": "ok"}), 200
 
-    try:
-        response = requests.post(MIDTRANS_URL, headers=headers, data=json.dumps(data))
-        response_data = response.json()
-        if response_data.get('status_code') == '201':
-            payment_url = response_data["actions"][1]["url"]  # GoPay deeplink
-            await update.message.reply_text(f"✅ Silakan bayar dengan GoPay:\n{payment_url}")
-        else:
-            await update.message.reply_text("❌ Gagal membuat pembayaran, coba lagi nanti.")
-    except Exception as e:
-        await update.message.reply_text(f"⚠️ Terjadi kesalahan: {str(e)}")
+async def run_bot():
+    """Menjalankan bot Telegram secara async"""
+    await application.run_polling()
 
-async def check_membership():
-    while True:
-        for user_id, expire_time in list(memberships.items()):
-            if time.time() > expire_time:
-                try:
-                    await app.bot.ban_chat_member(CHANNEL_ID, user_id)
-                    del memberships[user_id]
-                except Exception as e:
-                    print(f"⚠️ Gagal menghapus user {user_id}: {str(e)}")
-        await asyncio.sleep(86400)  # Check every 24 hours
-
-async def main():
-    global app
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("buy", buy))
-
-    # Run membership checker in background
-    asyncio.create_task(check_membership())
+if __name__ == "__main__":
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(run_bot())
