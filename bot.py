@@ -36,11 +36,13 @@ def index():
     return "Bot is alive!"
 
 async def run_telegram():
-    """Menjalankan bot Telegram dengan polling sebagai task terpisah."""
+    """Menjalankan bot Telegram tanpa menutup event loop."""
     await application.initialize()
     await application.start()
+    await application.updater.start_polling()  # 🔥 GUNAKAN `start_polling()`, BUKAN `run_polling()`
     logging.info("Telegram bot started!")
-    await application.run_polling(stop_signals=None)  # Hindari penutupan event loop
+    while True:
+        await asyncio.sleep(1)  # 🔥 Pastikan loop tetap berjalan
 
 async def run_flask():
     """Menjalankan Flask dengan Uvicorn di Railway."""
@@ -50,14 +52,9 @@ async def run_flask():
 
 async def main():
     """Jalankan Telegram bot & Flask secara bersamaan."""
-    await asyncio.gather(run_telegram(), run_flask())
+    task1 = asyncio.create_task(run_telegram())
+    task2 = asyncio.create_task(run_flask())
+    await asyncio.gather(task1, task2)
 
 if __name__ == "__main__":
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    loop.create_task(main())  # ✅ Jalankan tanpa menghentikan event loop
-    loop.run_forever()  # ✅ Pastikan loop tetap berjalan
+    asyncio.run(main())  # 🔥 GUNAKAN `asyncio.run(main())` AGAR LOOP DIKELOLA DENGAN BENAR
