@@ -1,4 +1,6 @@
 import os
+import logging
+from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
 from dotenv import load_dotenv
@@ -10,6 +12,7 @@ load_dotenv()
 
 # Mendapatkan token bot dari file .env
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # URL webhook untuk aplikasi Railway
 
 # Menentukan state untuk percakapan
 EMAIL = 1  # State untuk meminta email
@@ -39,7 +42,7 @@ async def handle_email(update: Update, context: CallbackContext):
     await update.message.reply_text(f"Thank you! We have received your email: {email}. Now we will proceed with your payment.")
     
     # Lanjutkan ke proses pembayaran
-    payment_link = create_payment_link(update.message.from_user, 1000, email)  # 1000 adalah jumlah dalam satuan terkecil (misalnya 1000 untuk 10.00 IDR)
+    payment_link = create_payment_link(update.message.from_user, 1000)  # 1000 adalah jumlah dalam satuan terkecil (misalnya 1000 untuk 10.00 IDR)
     
     if payment_link:
         await update.message.reply_text(f"Please complete your payment using this link: {payment_link}")
@@ -61,8 +64,19 @@ conversation_handler = ConversationHandler(
 )
 
 # Setup bot dengan handler percakapan
-application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()  # Menggunakan variabel TELEGRAM_BOT_TOKEN
+application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 application.add_handler(conversation_handler)
 
-# Menjalankan bot
-application.run_polling()
+# Setup Flask untuk menerima webhook
+app = Flask(__name__)
+
+# Endpoint untuk menerima webhook dari Telegram
+@app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    application.process_update(update)
+    return 'OK', 200
+
+# Menjalankan Flask dan Webhook
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 80)))  # Railway akan mengatur PORT secara otomatis
