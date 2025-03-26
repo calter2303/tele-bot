@@ -2,7 +2,6 @@ import os
 import logging
 import requests
 import asyncio
-import nest_asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from dotenv import load_dotenv
@@ -39,9 +38,6 @@ async def start(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ There was an error creating the payment link. Please try again later.")
 
 async def main():
-    # Pastikan Railway tidak mengalami error event loop
-    nest_asyncio.apply()
-
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("pay", start))
 
@@ -65,8 +61,8 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        loop = asyncio.get_event_loop()
-        loop.create_task(main())  # Jalankan bot tanpa menutup event loop
-        loop.run_forever()  # Pastikan loop tetap berjalan
+        loop = asyncio.new_event_loop()  # ✅ FIX: Gunakan new_event_loop untuk menghindari error
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(main())  # ✅ FIX: Gunakan run_until_complete agar event loop berjalan dengan benar
     except RuntimeError as e:
         logger.error(f"Runtime error: {e}")
