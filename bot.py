@@ -10,6 +10,7 @@ import uvicorn
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+PORT = int(os.getenv("PORT", 8000))  # Railway pakai env PORT
 
 # Setup logging
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -39,19 +40,19 @@ async def run_telegram():
     await application.initialize()
     await application.start()
     logging.info("Telegram bot started!")
-    await application.run_polling(stop_signals=None)  # ⬅️ Hindari penutupan event loop
+    await application.run_polling(stop_signals=None)  # Hindari penutupan event loop
 
 async def run_flask():
-    """Menjalankan Flask dengan Uvicorn di thread terpisah."""
-    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    """Menjalankan Flask dengan Uvicorn di Railway."""
+    config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()
 
 async def main():
     """Jalankan Telegram bot & Flask secara bersamaan."""
-    telegram_task = asyncio.create_task(run_telegram())  # ⬅️ Jalan sebagai task terpisah
+    telegram_task = asyncio.create_task(run_telegram())  
     flask_task = asyncio.create_task(run_flask())  
     await asyncio.gather(telegram_task, flask_task)
 
 if __name__ == "__main__":
-    asyncio.run(main())  # ✅ Sekarang event loop tidak ditutup secara paksa
+    asyncio.run(main())  # Railway butuh ini buat event loop
