@@ -4,5 +4,3 @@ uvicorn
 python-telegram-bot
 requests
 midtransclient
-
-
