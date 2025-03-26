@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import uvicorn
-from membership import add_member, is_member, remove_member  # Import fungsi dari membership.py
+from membership_db import add_member, is_member, remove_member, create_db  # Import fungsi dari membership_db.py
 
 # Load environment variables
 load_dotenv()
@@ -72,17 +72,21 @@ async def run_telegram():
     while True:
         await asyncio.sleep(1)  # 🔥 Pastikan loop tetap berjalan
 
-async def run_flask():
+# Fungsi untuk menjalankan Flask dengan Uvicorn
+def run_flask():
     """Menjalankan Flask dengan Uvicorn di Railway."""
     config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info")
     server = uvicorn.Server(config)
-    await server.serve()
+    server.run()
 
 async def main():
     """Jalankan Telegram bot & Flask secara bersamaan."""
-    task1 = asyncio.create_task(run_telegram())
-    task2 = asyncio.create_task(run_flask())
+    task1 = asyncio.create_task(run_telegram())  # Menjalankan Telegram bot
+    task2 = asyncio.to_thread(run_flask)  # Menjalankan Flask di thread terpisah
     await asyncio.gather(task1, task2)
 
 if __name__ == "__main__":
-    asyncio.run(main())  # 🔥 GUNAKAN `asyncio.run(main())` AGAR LOOP DIKELOLA DENGAN BENAR
+    # Membuat database dan tabel jika belum ada
+    create_db()
+    
+    asyncio.run(main())  # Menjalankan event loop
