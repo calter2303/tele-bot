@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 import asyncio
+import nest_asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from dotenv import load_dotenv
@@ -61,7 +62,14 @@ async def main():
         webhook_url=webhook_url,
     )
 
-# Perbaikan utama agar cocok dengan Railway
+# Perbaikan utama agar kompatibel dengan Railway
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
+    nest_asyncio.apply()  # Tambahan untuk menghindari error "This event loop is already running"
+    
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     loop.run_until_complete(main())
