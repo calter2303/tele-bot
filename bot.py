@@ -1,6 +1,8 @@
 import os
 import time
 import json
+import asyncio
+import base64
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
@@ -21,17 +23,25 @@ MIDTRANS_URL = "https://api.sandbox.midtrans.com/v2/charge"
 memberships = {}
 
 async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text("Halo! Selamat datang di Membership Bot 🚀\nGunakan /buy untuk membeli akses.")
+    """Menangani perintah /start"""
+    await update.message.reply_text(
+        "Halo! Selamat datang di Membership Bot 🚀\n"
+        "Gunakan /buy untuk membeli akses."
+    )
 
 async def buy(update: Update, context: CallbackContext):
+    """Menangani perintah /buy untuk pembayaran Midtrans"""
     user_id = update.message.chat_id
     amount = 15000  # Harga 15.000 IDR
-    
+
+    # Encode Server Key dengan Base64
+    auth_key = base64.b64encode(f"{MIDTRANS_SERVER_KEY}:".encode()).decode()
+
     headers = {
-        "Authorization": "Basic " + MIDTRANS_SERVER_KEY,
+        "Authorization": f"Basic {auth_key}",
         "Content-Type": "application/json",
     }
-    
+
     data = {
         "payment_type": "gopay",
         "transaction_details": {
@@ -45,33 +55,46 @@ async def buy(update: Update, context: CallbackContext):
     }
 
     try:
-        response = requests.post(MIDTRANS_URL, headers=headers, data=json.dumps(data))
+        response = requests.post(MIDTRANS_URL, headers=headers, json=data)
         response_data = response.json()
-        if response_data['status_code'] == '201':
+
+        if response_data.get('status_code') == '201':
             payment_url = response_data["actions"][1]["url"]  # Deeplink GoPay
             await update.message.reply_text(f"✅ Silakan bayar dengan GoPay:\n{payment_url}")
         else:
-            await update.message.reply_text("Gagal membuat pembayaran, coba lagi nanti.")
+            await update.message.reply_text("⚠️ Gagal membuat pembayaran, coba lagi nanti.")
     except Exception as e:
-        await update.message.reply_text(f"Terjadi kesalahan: {str(e)}")
+        await update.message.reply_text(f"❌ Terjadi kesalahan: {str(e)}")
 
 async def check_membership():
+    """Cek membership secara berkala dan hapus pengguna yang masa berlakunya habis"""
     while True:
-        for user_id, expire_time in list(memberships.items()):
-            if time.time() > expire_time:
+        expired_users = [user_id for user_id, expire_time in memberships.items() if time.time() > expire_time]
+
+        for user_id in expired_users:
+            try:
                 await app.bot.ban_chat_member(CHANNEL_ID, user_id)
                 del memberships[user_id]
-        time.sleep(86400)  # Cek setiap 24 jam
+                print(f"🚨 User {user_id} dihapus dari channel karena masa membership habis.")
+            except Exception as e:
+                print(f"❌ Gagal menghapus user {user_id}: {e}")
 
-# Jalankan bot
-app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("buy", buy))
+        await asyncio.sleep(86400)  # Cek setiap 24 jam
 
-# Jalankan cek membership di background
-import asyncio
-loop = asyncio.get_event_loop()
-loop.create_task(check_membership())
+async def main():
+    """Fungsi utama untuk menjalankan bot"""
+    global app
+    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-# Mulai bot
-app.run_polling()
+    # Tambahkan handler perintah
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("buy", buy))
+
+    # Jalankan pengecekan membership di background
+    asyncio.create_task(check_membership())
+
+    # Jalankan bot
+    await app.run_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())
