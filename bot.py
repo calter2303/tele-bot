@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import uvicorn
+from membership import add_member, is_member, remove_member  # Import fungsi dari membership.py
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +22,28 @@ app = Flask(__name__)
 # Setup Telegram bot
 application = Application.builder().token(TOKEN).build()
 
+# Fungsi untuk menambahkan anggota
+async def add(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username
+    add_member(user_id, username)
+    await update.message.reply_text(f"Hello {username}, you have been added as a member!")
+
+# Fungsi untuk mengecek apakah anggota sudah terdaftar
+async def check_member(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    if is_member(user_id):
+        await update.message.reply_text("You are already a member!")
+    else:
+        await update.message.reply_text("You are not a member yet.")
+
+# Fungsi untuk menghapus anggota
+async def remove(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    remove_member(user_id)
+    await update.message.reply_text("You have been removed from membership.")
+
+# Fungsi start dan echo
 async def start(update: Update, context: CallbackContext):
     await update.message.reply_text("Bot is running!")
 
@@ -30,6 +53,11 @@ async def echo(update: Update, context: CallbackContext):
 # Tambahkan handler
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+
+# Menambahkan handler baru untuk perintah add, check, remove
+application.add_handler(CommandHandler("add", add))
+application.add_handler(CommandHandler("check", check_member))
+application.add_handler(CommandHandler("remove", remove))
 
 @app.route("/")
 def index():
