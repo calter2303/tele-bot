@@ -73,17 +73,10 @@ async def main():
         webhook_url=f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}",
     )
 
-# Perbaikan utama agar kompatibel dengan Railway
+# ✅ Perbaikan utama agar Railway tidak error
 if __name__ == '__main__':
     nest_asyncio.apply()  # Hindari error event loop
-    
-    try:
-        loop = asyncio.get_running_loop()
-        if loop.is_running():
-            logger.warning("⚠️ Event loop sudah berjalan, menjalankan task secara manual.")
-            task = loop.create_task(main())
-            loop.run_until_complete(task)
-        else:
-            loop.run_until_complete(main())
-    except RuntimeError:
-        asyncio.run(main())  # Jalankan bot secara aman jika belum ada event loop
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(main())
