@@ -4,9 +4,10 @@ import asyncio
 from flask import Flask
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler, State
 import uvicorn
 from membership_db import add_member, is_member, remove_member, create_db  # Import fungsi dari membership_db.py
+from payment_service import create_payment_link  # Fungsi pembayaran (misalnya menggunakan Midtrans)
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +22,54 @@ app = Flask(__name__)
 
 # Setup Telegram bot
 application = Application.builder().token(TOKEN).build()
+
+# Menentukan state untuk percakapan
+EMAIL = 1  # State untuk meminta email
+
+# Variabel penyimpanan sementara untuk email
+user_email = {}
+
+# Fungsi untuk meminta email
+async def start(update: Update, context: CallbackContext):
+    await update.message.reply_text("Hello! To proceed with the payment, I need your email address. Please provide it.")
+
+    # Mengubah state ke EMAIL
+    return EMAIL
+
+# Fungsi untuk menangani input email
+async def handle_email(update: Update, context: CallbackContext):
+    email = update.message.text  # Ambil email yang diberikan oleh pengguna
+    user_id = update.message.from_user.id
+    
+    # Simpan email di penyimpanan sementara atau database
+    user_email[user_id] = email
+    
+    # Informasikan pengguna bahwa email sudah diterima
+    await update.message.reply_text(f"Thank you! We have received your email: {email}. Now we will proceed with your payment.")
+    
+    # Lanjutkan ke proses pembayaran
+    payment_link = create_payment_link(update.message.from_user, 1000)  # 1000 adalah jumlah dalam satuan terkecil (misalnya 1000 untuk 10.00 IDR)
+    
+    if payment_link:
+        await update.message.reply_text(f"Please complete your payment using this link: {payment_link}")
+    else:
+        await update.message.reply_text("There was an error creating the payment link. Please try again later.")
+    
+    return ConversationHandler.END  # Akhiri percakapan setelah email diberikan dan pembayaran diproses
+
+# Fungsi untuk membatalkan percakapan
+async def cancel(update: Update, context: CallbackContext):
+    await update.message.reply_text("Payment process has been canceled.")
+    return ConversationHandler.END  # Mengakhiri percakapan jika dibatalkan
+
+# Menambahkan handler percakapan untuk meminta email
+conversation_handler = ConversationHandler(
+    entry_points=[CommandHandler("pay", start)],  # Menggunakan perintah /pay untuk memulai percakapan
+    states={
+        EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_email)]  # Mendengarkan input email pengguna
+    },
+    fallbacks=[CommandHandler("cancel", cancel)]  # Menyediakan opsi untuk membatalkan percakapan
+)
 
 # Fungsi untuk memberikan link kepada pengguna
 async def join(update: Update, context: CallbackContext):
@@ -72,6 +121,9 @@ application.add_handler(CommandHandler("add", add))
 application.add_handler(CommandHandler("check", check_member))
 application.add_handler(CommandHandler("remove", remove))
 application.add_handler(CommandHandler("join", join))  # Handler untuk /join
+
+# Menambahkan handler percakapan untuk meminta email dan pembayaran
+application.add_handler(conversation_handler)
 
 @app.route("/")
 def index():
