@@ -3,6 +3,7 @@ import logging
 import requests
 import asyncio
 import nest_asyncio
+from flask import Flask, request, jsonify
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from dotenv import load_dotenv
@@ -20,13 +21,21 @@ PORT = int(os.getenv("PORT", 8080))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Ensure database is created
+# Pastikan database dibuat sebelum bot jalan
 create_db()
 
 # Fix event loop untuk Railway
 nest_asyncio.apply()
 
-# Payment command
+# Setup Flask buat handle webhook
+app = Flask(__name__)
+
+@app.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(), application.bot)
+    application.update_queue.put_nowait(update)
+    return jsonify({"status": "ok"})
+
 async def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     logger.info(f"Received /pay command from user {user_id}")
@@ -43,6 +52,7 @@ async def start(update: Update, context: CallbackContext):
 
 async def main():
     """Main function to run the bot with webhook"""
+    global application
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("pay", start))
 
@@ -61,11 +71,7 @@ async def main():
 
     logger.info(f"🚀 Bot is running on port {PORT}")
 
-    await application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=webhook_url,
-    )
+    app.run(host="0.0.0.0", port=PORT)  # Run Flask di Railway
 
 if __name__ == '__main__':
-    asyncio.run(main())  # Ini aman karena nest_asyncio udah diterapkan
+    asyncio.run(main())  # Ini aman karena nest_asyncio sudah diterapkan
