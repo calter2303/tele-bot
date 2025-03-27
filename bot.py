@@ -50,9 +50,7 @@ def webhook():
             return jsonify({"status": "error", "message": "Empty payload"}), 400
 
         update = Update.de_json(json_data, application.bot)
-
-        loop = asyncio.get_running_loop()
-        asyncio.run_coroutine_threadsafe(application.update_queue.put(update), loop)
+        asyncio.run_coroutine_threadsafe(application.update_queue.put(update), asyncio.get_event_loop())
 
         return jsonify({"status": "ok"})
     except Exception as e:
@@ -113,6 +111,6 @@ async def run_bot():
 
 if __name__ == '__main__':
     try:
-        asyncio.run(run_bot())
+        asyncio.run(run_bot())  # Memulai bot dengan benar
     except KeyboardInterrupt:
         logger.info("🛑 Bot shutting down...")
