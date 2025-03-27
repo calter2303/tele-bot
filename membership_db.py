@@ -17,18 +17,7 @@ def create_db():
     conn.commit()
     conn.close()
 
-# Fungsi untuk menambahkan anggota baru
-def add_member(user_id, username, payment_id=None):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''
-        INSERT OR REPLACE INTO members (user_id, username, payment_id, is_paid) 
-        VALUES (?, ?, ?, ?)
-    ''', (user_id, username, payment_id, 0))  
-    conn.commit()
-    conn.close()
-
-# Fungsi untuk memeriksa apakah pengguna sudah membayar
+# Fungsi untuk memeriksa apakah user sudah membayar
 def is_member(user_id):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -36,15 +25,3 @@ def is_member(user_id):
     member = c.fetchone()
     conn.close()
     return member is not None
-
-# Fungsi untuk memperbarui status pembayaran
-def update_payment_status(user_id, payment_id):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''
-        UPDATE members
-        SET is_paid = 1, payment_id = ?
-        WHERE user_id = ?
-    ''', (payment_id, user_id))
-    conn.commit()
-    conn.close()
