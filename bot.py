@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from payment_service import create_payment_link
 from membership_db import is_member, create_db
 
-# Load environment variables
+# Load ENV variables
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -114,3 +114,6 @@ if __name__ == '__main__':
         asyncio.run(run_bot())  # Memulai bot dengan benar
     except KeyboardInterrupt:
         logger.info("🛑 Bot shutting down...")
+
+# Pastikan Gunicorn bisa akses app
+app = Flask(__name__)
