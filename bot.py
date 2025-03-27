@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 import asyncio
+import nest_asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from dotenv import load_dotenv
@@ -21,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 # Ensure database is created
 create_db()
+
+# Fix event loop untuk Railway
+nest_asyncio.apply()
 
 # Payment command
 async def start(update: Update, context: CallbackContext):
@@ -43,6 +47,18 @@ async def main():
     application.add_handler(CommandHandler("pay", start))
 
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
+
+    logger.info(f"✅ Setting webhook: {webhook_url}")
+    response = requests.post(
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook",
+        json={"url": webhook_url}
+    )
+
+    if response.status_code == 200:
+        logger.info(f"✅ Webhook set successfully: {webhook_url}")
+    else:
+        logger.error(f"❌ Webhook setup failed: {response.text}")
+
     logger.info(f"🚀 Bot is running on port {PORT}")
 
     await application.run_webhook(
@@ -51,33 +67,5 @@ async def main():
         webhook_url=webhook_url,
     )
 
-async def set_webhook():
-    """Set Telegram webhook with retry mechanism to handle rate limits (429)"""
-    webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
-
-    for attempt in range(5):  # Coba maksimal 5 kali
-        response = requests.post(url, json={"url": webhook_url})
-        if response.status_code == 200:
-            logger.info(f"✅ Webhook set successfully: {webhook_url}")
-            return
-        elif response.status_code == 429:  # Telegram rate limit
-            retry_after = response.json().get("parameters", {}).get("retry_after", 1)
-            logger.warning(f"⚠️ Too many requests. Retrying in {retry_after} seconds...")
-            await asyncio.sleep(retry_after)  # HARUS pakai `await`
-        else:
-            logger.error(f"❌ Webhook failed: {response.text}")
-            break
-
-async def run():
-    await set_webhook()
-    await main()
-
 if __name__ == '__main__':
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:  # Kalau tidak ada event loop yang jalan
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(run())  # Jalankan tugas di event loop yang ada
+    asyncio.run(main())  # Ini aman karena nest_asyncio udah diterapkan
