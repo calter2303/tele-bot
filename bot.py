@@ -55,9 +55,6 @@ def webhook():
         asyncio.run_coroutine_threadsafe(application.update_queue.put(update), loop)
 
         return jsonify({"status": "ok"})
-    except RuntimeError as re:
-        logger.error(f"❌ Event loop error: {re}", exc_info=True)
-        return jsonify({"status": "error", "message": "Event loop is not running"}), 500
     except Exception as e:
         logger.error(f"❌ Error handling webhook: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -85,7 +82,7 @@ async def set_webhook():
     """Fungsi untuk mengatur webhook."""
     if WEBHOOK_URL:
         webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
-        logger.info("✅ Setting webhook...")
+        logger.info(f"✅ Setting webhook: {webhook_url}")
 
         try:
             await application.bot.set_webhook(webhook_url)
@@ -96,46 +93,26 @@ async def set_webhook():
         logger.warning("⚠️ WEBHOOK_URL tidak diset! Bot akan berjalan dengan polling mode.")
 
 def run_flask():
-    """Jalankan Flask server di thread terpisah."""
+    """Jalankan Flask server."""
     logger.info(f"🚀 Running Flask server on port {PORT}")
     app.run(host="0.0.0.0", port=PORT, use_reloader=False)
 
 async def run_bot():
-    """Jalankan bot dengan polling kalau webhook tidak diaktifkan."""
+    """Jalankan bot dengan webhook."""
     application.add_handler(CommandHandler("start", welcome))
     application.add_handler(CommandHandler("pay", start))
 
     await application.initialize()
+    await set_webhook()
 
-    if WEBHOOK_URL:
-        await set_webhook()
-        flask_thread = Thread(target=run_flask, daemon=True)
-        flask_thread.start()
-        await application.start()
-        await asyncio.Event().wait()  # Tetap hidup sampai dihentikan
-    else:
-        logger.info("🚀 Running bot in polling mode")
-        await application.run_polling()
+    flask_thread = Thread(target=run_flask, daemon=True)
+    flask_thread.start()
 
-async def shutdown():
-    """Fungsi untuk menutup bot dengan bersih saat dihentikan."""
-    logger.info("🛑 Shutting down bot...")
-    try:
-        await application.stop()
-        logger.info("✅ Bot stopped successfully!")
-    except Exception as e:
-        logger.error(f"❌ Error during shutdown: {e}", exc_info=True)
+    await application.start()
+    await asyncio.Event().wait()  # Tetap hidup sampai dihentikan
 
 if __name__ == '__main__':
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(run_bot())
+        asyncio.run(run_bot())
     except KeyboardInterrupt:
-        logger.info("🛑 KeyboardInterrupt detected! Shutting down...")
-        loop.run_until_complete(shutdown())
-    except Exception as e:
-        logger.error(f"❌ Unexpected error: {e}", exc_info=True)
-    finally:
-        loop.close()
-        logger.info("✅ Bot exited cleanly.")
+        logger.info("🛑 Bot shutting down...")
