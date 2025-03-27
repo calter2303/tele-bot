@@ -30,10 +30,14 @@ nest_asyncio.apply()
 # Setup Flask buat handle webhook
 app = Flask(__name__)
 
+@app.route("/", methods=["GET"])
+def home():
+    return "Bot is running!"
+
 @app.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
-def webhook():
+async def webhook():
     update = Update.de_json(request.get_json(), application.bot)
-    application.update_queue.put_nowait(update)
+    await application.update.update_queue.put(update)
     return jsonify({"status": "ok"})
 
 async def start(update: Update, context: CallbackContext):
@@ -71,7 +75,5 @@ async def main():
 
     logger.info(f"🚀 Bot is running on port {PORT}")
 
-    app.run(host="0.0.0.0", port=PORT)  # Run Flask di Railway
-
 if __name__ == '__main__':
-    asyncio.run(main())  # Ini aman karena nest_asyncio sudah diterapkan
+    asyncio.run(main())
