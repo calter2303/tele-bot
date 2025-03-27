@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Ensure database is created
 create_db()
 
-# Payment command
+# Command /pay
 async def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     logger.info(f"Received /pay command from user {user_id}")
@@ -37,8 +37,8 @@ async def start(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("❌ There was an error creating the payment link. Please try again later.")
 
+# Fungsi utama untuk menjalankan bot dengan webhook
 async def main():
-    """Main function to run the bot with webhook"""
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("pay", start))
 
@@ -51,31 +51,35 @@ async def main():
         webhook_url=webhook_url,
     )
 
+# Fungsi untuk set webhook
 async def set_webhook():
-    """Set Telegram webhook with retry mechanism to handle rate limits (429)"""
     webhook_url = f"{WEBHOOK_URL}/{TELEGRAM_BOT_TOKEN}"
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
 
-    for attempt in range(5):  # Coba maksimal 5 kali
+    for attempt in range(5):
         response = requests.post(url, json={"url": webhook_url})
         if response.status_code == 200:
             logger.info(f"✅ Webhook set successfully: {webhook_url}")
             return
-        elif response.status_code == 429:  # Telegram rate limit
+        elif response.status_code == 429:
             retry_after = response.json().get("parameters", {}).get("retry_after", 1)
             logger.warning(f"⚠️ Too many requests. Retrying in {retry_after} seconds...")
-            await asyncio.sleep(retry_after)  # HARUS pakai `await`
+            await asyncio.sleep(retry_after)
         else:
             logger.error(f"❌ Webhook failed: {response.text}")
             break
 
-if __name__ == '__main__':
-    async def run():
-        await set_webhook()
-        await main()
+# Jalankan bot
+async def run():
+    await set_webhook()
+    await main()
 
+if __name__ == '__main__':
     try:
-        asyncio.get_running_loop().run_until_complete(run())
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        logger.warning("⚠️ Event loop sudah berjalan, menjalankan tugas di loop yang ada.")
-        asyncio.run(run())  # Jalankan tanpa konflik event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(run())
+    else:
+        loop.create_task(run())
